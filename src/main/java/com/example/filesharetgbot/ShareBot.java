@@ -104,6 +104,6 @@ public class ShareBot implements SpringLongPollingBot, LongPollingSingleThreadUp
 
         jsonNode = objectMapper.readTree(downloadJsonFile(filePath));
 
-      return jsonNode.path("text").asText("Файл пустой");
+      return jsonNode.path("data").asText("Файл пустой");
     }
 }
