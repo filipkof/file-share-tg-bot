@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class FileShareTgBotApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(FileShareTgBotApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(FileShareTgBotApplication.class, args);
+    }
 
 }
