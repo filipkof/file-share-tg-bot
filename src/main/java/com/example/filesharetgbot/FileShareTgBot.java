@@ -1,6 +1,8 @@
 package com.example.filesharetgbot;
 
+import com.example.filesharetgbot.service.KafkaSender;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
@@ -10,16 +12,21 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
-import pojos.QuestionResponse;
-import pojos.QuestionsItem;
+import com.example.filesharetgbot.dto.QuestionResponseDto;
+import com.example.filesharetgbot.dto.QuestionsItemDto;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 
 
 @Component
 public class FileShareTgBot extends TelegramLongPollingBot {
+    private final KafkaSender kafkaSender;
+
+    public FileShareTgBot(KafkaSender kafkaSender) {
+        this.kafkaSender = kafkaSender;
+    }
+
     @Override
     public String getBotUsername() {
         return "filipkofbot"; // Замените на имя вашего бота
@@ -56,6 +63,7 @@ public class FileShareTgBot extends TelegramLongPollingBot {
             sendDocument.setDocument(inputFile);
 
             processJsonFile(fileId, String.valueOf(chatId));
+            kafkaSendMessage(fileId, String.valueOf(chatId));
 
             try {
                 execute(sendDocument);
@@ -80,13 +88,10 @@ public class FileShareTgBot extends TelegramLongPollingBot {
         return null;
     }
 
-    public List<QuestionsItem> readJsonFile(java.io.File downloadJsonFile) {
+    public QuestionResponseDto readJsonFile(java.io.File downloadJsonFile) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            // Читаем JSON файл в JsonNode
-            QuestionResponse questionResponse = objectMapper.readValue(downloadJsonFile, QuestionResponse.class);
-            // Преобразуем JsonNode в строку
-            return questionResponse.getQuestionsItem();
+            return objectMapper.readValue(downloadJsonFile, QuestionResponseDto.class);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -111,6 +116,15 @@ public class FileShareTgBot extends TelegramLongPollingBot {
             String jsonContent = String.valueOf(readJsonFile(jsonFile));
             sendJsonContentAsMessage(chatId, jsonContent);
         }
+    }
+
+    public void kafkaSendMessage(String fileId, String chatId) {
+        java.io.File jsonFile = downloadJsonFile(fileId);
+        if (jsonFile != null) {
+            QuestionResponseDto jsonContent = readJsonFile(jsonFile);
+            kafkaSender.sendKafka(jsonContent, "QuestionsFromTg");
+        }
+
     }
 
 }
